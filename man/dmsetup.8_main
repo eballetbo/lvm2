@@ -22,14 +22,17 @@ dmsetup \(em low level logical volume management
 .de CMD_CREATE
 .  ad l
 .  BR create
-.  IR device_name
+.  IR [[device_name]
 .  RB [ -u | --uuid
 .  IR uuid ]
 .  RB \%[ --addnodeoncreate | --addnodeonresume ]
 .  RB \%[ -n | --notable | --table
 .  IR \%table | table_file ]
 .  RB [ --readahead
-.  RB \%[ + ] \fIsectors | auto | none ]
+.  RB \%[ + ] \fIsectors | auto | none ]]
+.  RB |
+.  RB \%[ --bootformat
+.  IR \%multi_dev_info | multi_dev_info_file]
 .  ad b
 ..
 .CMD_CREATE
@@ -269,9 +272,11 @@ dmsetup \(em low level logical volume management
 .de CMD_TABLE
 .  ad l
 .  BR table
-.  RB [ --target
+.  RB [[ --target
 .  IR target_type ]
-.  RB [ --showkeys ]
+.  RB [ --showkeys ]]
+.  RB |
+.  RB [ --bootformat ]
 .  RI [ device_name ...]
 .  ad b
 ..
@@ -398,6 +403,12 @@ Ensure \fI/dev/mapper\fP node exists after \fBdmsetup create\fP.
 .BR --addnodeonresume
 .br
 Ensure \fI/dev/mapper\fP node exists after \fBdmsetup resume\fP (default with udev).
+.
+.HP
+.BR --bootformat
+.br
+Specify a one-line multi device setup information directly on the command line.
+See below for more information on the boot format.
 .
 .HP
 .BR --checks
@@ -610,9 +621,12 @@ Destroys the table in the inactive table slot for device_name.
 .HP
 .CMD_CREATE
 .br
-Creates a device with the given name.
-If \fItable\fP or \fItable_file\fP is supplied, the table is loaded and made live.
-Otherwise a table is read from standard input unless \fB--notable\fP is used.
+Creates a device with the given name or multiple devices if boot format is used.
+If boot format is used we must supply a multiple device setup information
+from cmdline or standard input. See below for more information on the boot format.
+Otherwise, if \fItable\fP or \fItable_file\fP is supplied, the table is loaded
+and made live. Otherwise a table is read from standard input unless \fB--notable\fP
+is used.
 The optional \fIuuid\fP can be used in place of
 device_name in subsequent dmsetup commands.
 If successful the device will appear in table and for live
@@ -824,6 +838,8 @@ Real encryption keys are suppressed in the table output for the crypt
 target unless the \fB--showkeys\fP parameter is supplied. Kernel key
 references prefixed with \fB:\fP are not affected by the parameter and get
 displayed always.
+With \fB--bootformat\fP, the information relating to the specified targets
+is displayed in boot format style.
 .
 .HP
 .CMD_TARGETS
@@ -995,6 +1011,53 @@ documentation directory for the device-mapper package.)
 0 2056320 striped 2 32 /dev/hda 0 /dev/hdb 0
 .br
 2056320 2875602 linear /dev/hdb 1028160
+.
+.SH BOOT FORMAT
+.
+Simple string of data separated by commas and optionally semi-colons, where:
+.br
+- A comma is used to separate the fields for one device.
+.br
+- A semi-colon is used to separate devices.
+.TP
+The string is of the form:
+.sp
+<name>,<uuid>,<flags>,<table>[,<table>+][;<dev_name>,<uuid>,<flags>,<table>[,<table>+]]
+.sp
+.TP
+One device args include:
+.
+.TP
+.B name
+The name of the device.
+.TP
+.B uuid
+The UUID of the device or empty
+.TP
+.B flags
+Supported flags are:
+.sp
+.B ro
+Sets the table being loaded for the device read-only (default)
+.br
+.B rw
+Sets the table being loaded for the device read-write
+.sp
+.TP
+.B table
+See table format above.
+.TP
+.
+.SH EXAMPLES
+.
+# A simple linear device
+.br
+test-linear-small,,ro,0 2097152 linear /dev/loop0 0, 2097152 2097152 linear /dev/loop1 0'
+.br
+# Two linear devices
+.br
+test-linear-small,,ro,0 2097152 linear /dev/loop0 0;test-linear-large,,rw, 0 2097152 linear /dev/loop1 0, 2097152 2097152 linear /dev/loop2 0
+.br
 .
 .SH ENVIRONMENT VARIABLES
 .
