@@ -163,6 +163,7 @@ enum {
 	AREA_ARG,
 	AREAS_ARG,
 	AREA_SIZE_ARG,
+	BOOTFORMAT_ARG,
 	BOUNDS_ARG,
 	CHECKS_ARG,
 	CLEAR_ARG,
@@ -2127,6 +2128,9 @@ static int _status(CMD_ARGS)
 	int matched = 0;
 	int ls_only = 0;
 	struct dm_info info;
+	const char *uuid = NULL;
+	char bootstr[LINE_SIZE] = {0};
+	int len;
 
 	if (names)
 		name = names->name;
@@ -2171,6 +2175,9 @@ static int _status(CMD_ARGS)
 	if (!name)
 		name = dm_task_get_name(dmt);
 
+	if (!uuid)
+		uuid = dm_task_get_uuid(dmt);
+
 	/* Fetch targets and print 'em */
 	do {
 		next = dm_get_next_target(dmt, next, &start, &length,
@@ -2184,6 +2191,20 @@ static int _status(CMD_ARGS)
 			    _switches[VERBOSE_ARG])
 				_display_dev(dmt, name);
 			next = NULL;
+		} else if (_switches[BOOTFORMAT_ARG]) {
+			if (!dm_snprintf(bootstr, sizeof(bootstr), "%s,%s,%s",
+					 dm_task_get_name(dmt), uuid,
+					 info.read_only ? "ro" : "rw"))
+				goto_out;
+			if (target_type) {
+				len = strlen(bootstr);
+				if (!dm_snprintf(bootstr + len,
+						 sizeof(bootstr) - len,
+						 "," FMTu64 " " FMTu64 " %s %s",
+						 start, length, target_type,
+						 params))
+					goto_out;
+			}
 		} else if (!_switches[EXEC_ARG] || !_command_to_exec ||
 			   _switches[VERBOSE_ARG]) {
 			if (!matched && _switches[VERBOSE_ARG])
@@ -2217,6 +2238,9 @@ static int _status(CMD_ARGS)
 		}
 		matched = 1;
 	} while (next);
+
+	if (matched && _switches[BOOTFORMAT_ARG])
+		printf("%s;", bootstr);
 
 	if (multiple_devices && _switches[VERBOSE_ARG] && matched && !ls_only)
 		putchar('\n');
@@ -5903,7 +5927,9 @@ static struct command _dmsetup_commands[] = {
 	{"deps", "[-o <options>] [<device>...]", 0, -1, 1, 0, _deps},
 	{"stats", "<command> [<options>] [<device>...]", 1, -1, 1, 1, _stats},
 	{"status", "[<device>...] [--noflush] [--target <target_type>]", 0, -1, 1, 0, _status},
-	{"table", "[<device>...] [--target <target_type>] [--showkeys]", 0, -1, 1, 0, _status},
+	{"table", "[<device>...]\n"
+	   "\t    [--target <target_type>] [--showkeys]\n"
+	   "\t    [--bootformat]", 0, -1, 1, 0, _status},
 	{"wait", "<device> [<event_nr>] [--noflush]", 0, 2, 0, 0, _wait},
 	{"mknodes", "[<device>...]", 0, -1, 1, 0, _mknodes},
 	{"mangle", "[<device>...]", 0, -1, 1, 0, _mangle},
@@ -6468,6 +6494,7 @@ static int _process_switches(int *argcp, char ***argvp, const char *dev_dir)
 		{"area", 0, &ind, AREA_ARG},
 		{"areas", 1, &ind, AREAS_ARG},
 		{"areasize", 1, &ind, AREA_SIZE_ARG},
+		{"bootformat", 0, &ind, BOOTFORMAT_ARG},
 		{"bounds", 1, &ind, BOUNDS_ARG},
 		{"checks", 0, &ind, CHECKS_ARG},
 		{"clear", 0, &ind, CLEAR_ARG},
@@ -6636,6 +6663,8 @@ static int _process_switches(int *argcp, char ***argvp, const char *dev_dir)
 			return_0;
 		if (c == 'h' || ind == HELP_ARG)
 			_switches[HELP_ARG]++;
+		if (ind == BOOTFORMAT_ARG)
+			_switches[BOOTFORMAT_ARG]++;
 		if (ind == BOUNDS_ARG) {
 			_switches[BOUNDS_ARG]++;
 			_string_args[BOUNDS_ARG] = optarg;
