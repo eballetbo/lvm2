@@ -66,6 +66,7 @@ dm_dump_memory_debug
 dm_escaped_len
 dm_escape_double_quotes
 dm_fclose
+dm_find_unescaped_char
 dm_format_dev
 dm_free_aux
 dm_get_library_version
@@ -279,8 +280,10 @@ dm_udev_get_sync_support
 dm_udev_set_checking
 dm_udev_set_sync_support
 dm_udev_wait
+dm_unescape_colons
 dm_unescape_colons_and_at_signs
 dm_unescape_double_quotes
+dm_unescape_semicolons
 dm_units_to_factor
 dm_uuid_prefix
 dm_vasprintf

@@ -2662,6 +2662,23 @@ void dm_unescape_colons_and_at_signs(char *src,
  */
 int dm_strncpy(char *dest, const char *src, size_t n);
 
+char *dm_unescape_colons(char *str);
+
+char *dm_unescape_semicolons(char *str);
+
+/*
+ * Splits a string into tokens ignoring escaped chars
+ *
+ * Updates @s to point after the token, ready for the next call.
+ *
+ * @s: The string to be searched
+ * @c: The character to search for
+ *
+ * Returns:
+ *   The string found or NULL.
+ */
+char *dm_find_unescaped_char(char **str, const char c);
+
 /*
  * Recognize unit specifier in the 'units' arg and return a factor
  * representing that unit. If the 'units' contains a prefix with digits,

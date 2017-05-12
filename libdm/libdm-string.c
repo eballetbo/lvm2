@@ -444,6 +444,88 @@ int dm_strncpy(char *dest, const char *src, size_t n)
 	return 0;
 }
 
+/*
+ * Unescape characters in situ, it replaces all occurrences of "\c"
+ * with 'c'. This is normally used to unescape colons and semi-colons used
+ * in boot format.
+ */
+static char *_unescape_char(char *str, const char c)
+{
+	int i = 0, j = 0;
+	int len = strlen(str);
+
+	if (len < 2)
+		return str;
+
+	while (j < len - 1) {
+		if (str[j] == '\\' && str[j + 1] == c) {
+			j = j + 2;
+			str[i++] = c;
+			continue;
+		}
+		str[i++] = str[j++];
+	}
+
+	if (j == len - 1)
+		str[i++] = str[j];
+
+	str[i] = '\0';
+
+	return str;
+}
+
+char *dm_unescape_colons(char *str)
+{
+	return _unescape_char(str, ',');
+}
+
+char *dm_unescape_semicolons(char *str)
+{
+	return _unescape_char(str, ';');
+}
+
+#define is_even(a) (((a) & 1) == 0)
+
+/*
+ * Splits a string into tokens ignoring escaped chars
+ *
+ * Updates @s to point after the token, ready for the next call.
+ *
+ * @str: The string to be searched
+ * @c: The character to search for
+ *
+ * Returns:
+ *   The string found or NULL.
+ */
+char *dm_find_unescaped_char(char **str, const char c)
+{
+	char *s = *str;
+	char *p = strchr(*str, c);
+
+	/* loop through all the characters */
+	while (p != NULL) {
+		/* scan backwards through preceding escapes */
+		char* q = p;
+		while (q > s && *(q - 1) == '\\')
+			--q;
+		/* even number of escapes so c is a token */
+		if (is_even( p - q )) {
+			*p = '\0';
+			*str = p + 1;
+			return s;
+		}
+		/* else odd escapes so c is escaped, keep going */
+		p = strchr(p + 1, c);
+	}
+
+	if (strlen(*str)) {
+		*str += strlen(*str);
+		return s;
+	}
+
+	return NULL;
+}
+
 /* Test if the doubles are close enough to be considered equal */
 static int _close_enough(double d1, double d2)
 {
